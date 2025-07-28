@@ -1,0 +1,33 @@
+To use it, run this:
+
+	Mesh.MeshDataArray LODMeshDataArray = Mesh.AllocateWritableMeshData(7);
+	MarchingCubes.Execute(voxels, LODMeshDataArray, LOD, voxelSize);
+	Mesh.ApplyAndDisposeWritableMeshData(LODMeshDataArray, meshes);
+
+meshes is a Mesh[7] array, meshes[0] is the main chunk mesh
+then mesh[1-6] gives a transition face as follows:
+1= X 2 = -X. 3 = Y. 4 = -Y. 5 = Z. 6 = -Z.
+When you run this code, it will apply all meshes to that meshes array.
+
+voxels is your float[,,], which holds voxel data, like a signed distance field. 0 is the surfaceLevel, but you can change it if you find it in my code.
+Make sure your voxels array size - 1 is divisible by 2^LOD on each dimension, because otherwise you wont be able to get that LOD level.
+So if you wanna run it on LOD 3, you will need it to have values 0 - 8 (yes, 8 inclusive). Or 0-16. Or 0-24. Etc. 
+
+LOD is an int, where LOD = 0 means we march every voxel, LOD = 1 we march every second voxel etc.
+you will only have transition meshes on LOD > 0, because thats how transvoxel works
+
+voxelSize is a float which says how far apart are your voxels, most people will have it as 1. 
+I believe 1/voxelSize has to be an integer to not cause problems. So set it to 1, 0.5, 0.3333.., 0.25, etc.
+
+This code isnt *exactly* the same as Eric Lengyel's transvoxel, as I've done some changes eg. vertex sharing on minimal edges.
+I've also changed his tables, so if you wanna use his tables specifically, you will have to adjust vertexSharingIndexes[,,,] to have its last dimension bigger so that it fits all the cases.
+The reason why I did that is because my implementation doesnt share vertices if the t value in interpolation is exactly 0 or 1, but it's a fairly rare case with floating point math and shouldnt cause problems for too many people.
+My implementation also doesn't calculate vertex normals. So you might wanna run:
+for (int i = 0; i < 7; i++)
+{
+    meshes[i].RecalculateNormals();
+}
+to get fairly decent normals after applying the meshes.
+
+This code can have some specific things for my game, but I tried to make it as general as possible.
+If you have any questions about the implementation, reach out to me on discord: verdant2202 or comment on the reddit post.
