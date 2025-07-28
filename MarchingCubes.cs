@@ -160,7 +160,7 @@ public static class MarchingCubes
 
         for (int i = 0; i < cellData.vertices.Length; i += 3)
         {
-            if (reverseWinding)
+            if (reverseWinding ^ (faceDirection == TransitionFaceDirection.Negative))
             {
                 triangles.Add(vertexIndexes[cellData.vertices[i]]);
                 triangles.Add(vertexIndexes[cellData.vertices[i + 1]]);
