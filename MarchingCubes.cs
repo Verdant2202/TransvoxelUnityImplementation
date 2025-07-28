@@ -177,7 +177,7 @@ public static class MarchingCubes
 
     public static void SetTransitionCornerOffset(Vector3[] transitionCornerOffset, float transitionCellSize, AxisTriplet axisTriplet, TransitionFaceDirection faceDirection)
     {
-        float sign = faceDirection == TransitionFaceDirection.Positive ? 1f : -1f;
+        float sign = faceDirection == TransitionFaceDirection.Positive ? -1f : 1f;
 
         // 2D grid positions (first x, second y), fixed axis is constant
         int2[] offsets2D = new int2[]
