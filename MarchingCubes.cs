@@ -15,7 +15,7 @@ public static class MarchingCubes
         CreateRegularMesh(voxels, voxelScale, step, meshDataArray[0]);
 
         //Transvoxel Start, if you dont like it, remove anything below and any functions it uses.
-        if(LOD == 0)
+        if (LOD == 0)
         {
             return;
         }
@@ -23,12 +23,12 @@ public static class MarchingCubes
         int ySize = voxels.GetLength(1);
         int zSize = voxels.GetLength(2);
         float transitionCellSize = 0.0f; //2 - full step, 1 - half step. Value should be below 1, probably best is 0.5. Also it requires to use shader code to pull in vertices of main mesh.
-        CreateTransitionFace(voxels, voxelScale, step, new int3(xSize-1, 0, 0), new AxisTriplet(Axis.X), TransitionFaceDirection.Positive, meshDataArray[1], transitionCellSize);
-        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, 0), new AxisTriplet(Axis.X), TransitionFaceDirection.Negative, meshDataArray[2], transitionCellSize);
-        CreateTransitionFace(voxels, voxelScale, step, new int3(0, ySize-1, 0), new AxisTriplet(Axis.Y), TransitionFaceDirection.Positive, meshDataArray[3], transitionCellSize);
-        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, 0), new AxisTriplet(Axis.Y), TransitionFaceDirection.Negative, meshDataArray[4], transitionCellSize);
-        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, zSize-1), new AxisTriplet(Axis.Z), TransitionFaceDirection.Positive, meshDataArray[5], transitionCellSize);
-        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, 0), new AxisTriplet(Axis.Z), TransitionFaceDirection.Negative, meshDataArray[6], transitionCellSize);
+        CreateTransitionFace(voxels, voxelScale, step, new int3(xSize - 1, 0, 0), new AxisTriplet(Axis.X), TransitionFaceDirection.Positive, meshDataArray[1], transitionCellSize, false);
+        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, 0), new AxisTriplet(Axis.X), TransitionFaceDirection.Negative, meshDataArray[2], transitionCellSize, true);
+        CreateTransitionFace(voxels, voxelScale, step, new int3(0, ySize - 1, 0), new AxisTriplet(Axis.Y), TransitionFaceDirection.Positive, meshDataArray[3], transitionCellSize, true);
+        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, 0), new AxisTriplet(Axis.Y), TransitionFaceDirection.Negative, meshDataArray[4], transitionCellSize, false);
+        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, zSize - 1), new AxisTriplet(Axis.Z), TransitionFaceDirection.Positive, meshDataArray[5], transitionCellSize, false);
+        CreateTransitionFace(voxels, voxelScale, step, new int3(0, 0, 0), new AxisTriplet(Axis.Z), TransitionFaceDirection.Negative, meshDataArray[6], transitionCellSize, true);
     }
 
     public static void SetMeshData(Mesh.MeshData meshData, List<Vector3> vertices, List<int> triangles)
@@ -63,8 +63,8 @@ public static class MarchingCubes
 
     //Transvoxel functions
 
-    public static void CreateTransitionFace(float[,,] voxels, float voxelScale, int step, int3 startPosition, 
-        AxisTriplet axisTriplet, TransitionFaceDirection faceDirection, Mesh.MeshData meshData, float transitionCellSize)
+    public static void CreateTransitionFace(float[,,] voxels, float voxelScale, int step, int3 startPosition,
+        AxisTriplet axisTriplet, TransitionFaceDirection faceDirection, Mesh.MeshData meshData, float transitionCellSize, bool faceReverseWinding)
     {
         List<Vector3> vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
@@ -79,9 +79,9 @@ public static class MarchingCubes
         int[,,] vertexSharingIndexes = new int[firstSize + 1, secondSize + 1, 7];
         for (int i = 0; i < firstSize + 1; i++)
         {
-            for(int j = 0; j < secondSize + 1; j++)
+            for (int j = 0; j < secondSize + 1; j++)
             {
-                for(int k = 0; k < 7; k++)
+                for (int k = 0; k < 7; k++)
                 {
                     vertexSharingIndexes[i, j, k] = -1;
                 }
@@ -101,7 +101,7 @@ public static class MarchingCubes
             SetTransitionCornerOffset(transitionCornerOffset, transitionCellSize, axisTriplet, faceDirection);
             ProcessTransitionCube(cubePosition, cubeCorners, 0f, voxelScale, step,
                                 vertices, triangles, vertexSharingIndexes,
-                                transitionCornerOffset, axisTriplet);
+                                transitionCornerOffset, axisTriplet, faceReverseWinding);
 
             // Move to next cell in 2D grid
             current.Set(axisTriplet.First, current.Get(axisTriplet.First) + step);
@@ -119,7 +119,7 @@ public static class MarchingCubes
     }
 
     public static void ProcessTransitionCube(int3 cubePosition, float[] corners, float isoLevel, float scale, int step,
-       List<Vector3> vertices, List<int> triangles, int[,,] vertexSharingIndexes, Vector3[] transitionCornerOffset, AxisTriplet axisTriplet)
+       List<Vector3> vertices, List<int> triangles, int[,,] vertexSharingIndexes, Vector3[] transitionCornerOffset, AxisTriplet axisTriplet, bool faceReverseWinding)
     {
         int cubeIndex = CalculateTransitionCubeIndex(corners, isoLevel);
 
@@ -145,7 +145,7 @@ public static class MarchingCubes
                 int secondVertex = (vertexCode & (0x00F0)) >> 4;
                 vertices.Add(InterpolateTransitionEdge(cubePosition, scale, step, firstVertex, secondVertex, corners, transitionCornerOffset));
                 vertexIndexes[i] = vertices.Count - 1;
-                if(directionNibble == 8)
+                if (directionNibble == 8)
                 {
                     vertexSharingIndexes[vFirst, vSecond, vertexIndexToReuse] = vertices.Count - 1;
                 }
@@ -160,7 +160,8 @@ public static class MarchingCubes
 
         for (int i = 0; i < cellData.vertices.Length; i += 3)
         {
-            if (reverseWinding ^ (faceDirection == TransitionFaceDirection.Negative))
+            //I dont know why but my windings were different on different faces so i just added a faceReverseWinding bool.
+            if (reverseWinding ^ faceReverseWinding)
             {
                 triangles.Add(vertexIndexes[cellData.vertices[i]]);
                 triangles.Add(vertexIndexes[cellData.vertices[i + 1]]);
@@ -219,7 +220,7 @@ public static class MarchingCubes
             v[(int)axisTriplet.First] = outer2D[i].x;
             v[(int)axisTriplet.Second] = outer2D[i].y;
             v[(int)axisTriplet.Fixed] = sign * transitionCellSize;
-            transitionCornerOffset[i+9] = v;
+            transitionCornerOffset[i + 9] = v;
         }
     }
 
